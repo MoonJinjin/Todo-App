@@ -69,7 +69,10 @@ export default class ToDo extends React.Component {
                                 <Text style={styles.actionText}>✏</Text>
                             </View>
                         </TouchableOpacity>
-                        <TouchableOpacity onPressOut={() => deleteToDo(id)}>
+                        <TouchableOpacity onPressOut={event => {
+                            event.stopPropagation;
+                            deleteToDo(id);
+                        }}>
                             <View style={styles.actionContainer}>
                                 <Text style={styles.actionText}>❌</Text>
                             </View>

@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { StyleSheet, Text, TextInput, View, Dimensions, Platform, ScrollView } from 'react-native';
+import { StyleSheet, Text, TextInput, View, Dimensions, Platform, ScrollView, AsyncStorage } from 'react-native';
 import ToDo from "./ToDo";
 import uuidv1 from "uuid/v1";
 
@@ -13,13 +13,10 @@ export default class App extends React.Component {
     toDos: {}
   };
   componentDidMount = () => {
-    this._lodaToDos();
+    this._loadToDos();
   }
   render() {
-    const { newToDo, loadedToDos, toDos } = this.state;
-    if (!loadedToDos) {
-      return null;
-    }
+    const { newToDo, toDos } = this.state;
     return (
       <View style={styles.container}>
         <StatusBar barStyle="auto" />
@@ -34,18 +31,19 @@ export default class App extends React.Component {
             returnKeyType={"done"}
             autoCorrect={false}
             onSubmitEditing={this._addToDo}
+            underlineColorAndroid={"transparent"}
           />
           <ScrollView contentContainerStyle={styles.toDos}>
-            {Object.values(toDos).map(toDo =>
+            {Object.values(toDos).reverse().map(toDo => (
               <ToDo
                 key={toDo.id}
-                {...toDo}
                 deleteToDo={this._deleteToDo}
                 uncompleteToDo={this._uncompleteToDo}
-                completeToDo={this._competeToDo}
+                completeToDo={this._completeToDo}
                 updateToDo={this._updateToDo}
+                {...toDo}
               />
-            )}
+            ))}
           </ScrollView>
         </View>
       </View>
@@ -56,10 +54,17 @@ export default class App extends React.Component {
       newToDo: text
     });
   };
-  _lodaToDos = () => {
-    this.setState({
-      loadedToDos: true
-    });
+  _loadToDos = async () => {
+    try {
+      const toDos = await AsyncStorage.getItem("toDos");
+      const parsedToDos = JSON.parse(toDos);
+      this.setState({
+        loadedToDos: true,
+        toDos: parsedToDos || {}
+      });
+    } catch (err) {
+      console.log(err);
+    }
   };
   _addToDo = () => {
     const { newToDo } = this.state;
@@ -82,6 +87,7 @@ export default class App extends React.Component {
             ...newToDoObject
           }
         };
+        this._saveToDos(newState.toDos);
         return { ...newState };
       });
     }
@@ -94,6 +100,7 @@ export default class App extends React.Component {
         ...prevState,
         ...toDos
       }
+      this._saveToDos(newState.toDos);
       return { ...newState };
     })
   };
@@ -109,10 +116,11 @@ export default class App extends React.Component {
           }
         }
       };
+      this._saveToDos(newState.toDos);
       return { ...newState };
     });
   };
-  _competeToDo = (id) => {
+  _completeToDo = (id) => {
     this.setState(prevState => {
       const newState = {
         ...prevState,
@@ -124,6 +132,7 @@ export default class App extends React.Component {
           }
         }
       };
+      this._saveToDos(newState.toDos);
       return { ...newState };
     });
   };
@@ -139,9 +148,13 @@ export default class App extends React.Component {
           }
         }
       };
+      this._saveToDos(newState.toDos);
       return { ...newState };
     });
   };
+  _saveToDos = (newToDos) => {
+    const saveToDos = AsyncStorage.setItem("toDos", JSON.stringify(newToDos));
+  }
 }
 
 const styles = StyleSheet.create({
